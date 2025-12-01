@@ -1,6 +1,6 @@
 /*
- Manejar los modales de eliminar y editar
- */
+Manejar los modales de eliminar y editar
+*/
 
 document.addEventListener("DOMContentLoaded", function () {
   // Busca para eliminar algo
@@ -48,7 +48,45 @@ document.addEventListener("DOMContentLoaded", function () {
             input.value = datos[nombreCampo];
           }
         });
+
+        // Calcular porcentaje de ganancia inicial para editar
+        const precioCompra = parseFloat(document.getElementById('edit-preciocompra').value) || 0;
+        const precioVenta = parseFloat(document.getElementById('edit-precioventa').value) || 0;
+        const porcentajeInput = document.getElementById('edit-porcentajeGanancia');
+
+        if (precioCompra > 0 && precioVenta > 0) {
+          const ganancia = ((precioVenta - precioCompra) / precioCompra) * 100;
+          porcentajeInput.value = ganancia.toFixed(2);
+        } else {
+          porcentajeInput.value = '';
+        }
       }
     });
   });
+
+  // Lógica para calcular precio de venta basado en porcentaje de ganancia
+  function calcularPrecioVenta(idCompra, idPorcentaje, idVenta) {
+    const inputCompra = document.getElementById(idCompra);
+    const inputPorcentaje = document.getElementById(idPorcentaje);
+    const inputVenta = document.getElementById(idVenta);
+
+    function actualizarPrecio() {
+      const compra = parseFloat(inputCompra.value) || 0;
+      const porcentaje = parseFloat(inputPorcentaje.value) || 0;
+
+      if (compra >= 0 && porcentaje >= 0) {
+        const venta = compra + (compra * (porcentaje / 100));
+        inputVenta.value = venta.toFixed(2);
+      }
+    }
+
+    if (inputCompra && inputPorcentaje && inputVenta) {
+      inputCompra.addEventListener('input', actualizarPrecio);
+      inputPorcentaje.addEventListener('input', actualizarPrecio);
+    }
+  }
+
+  // Inicializar cálculos para registrar y editar
+  calcularPrecioVenta('precioCompra', 'porcentajeGanancia', 'precioVenta');
+  calcularPrecioVenta('edit-preciocompra', 'edit-porcentajeGanancia', 'edit-precioventa');
 });

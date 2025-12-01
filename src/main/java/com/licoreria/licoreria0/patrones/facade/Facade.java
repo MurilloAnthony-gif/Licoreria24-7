@@ -40,6 +40,9 @@ public class Facade {
     private ProductoFactory productoFactory;
 
     @Autowired
+    private DetalleCompraRepositorio detalleCompraRepositorio;
+
+    @Autowired
     private PasswordEncoder codificadorDeContrasena;
 
     @Autowired
@@ -186,6 +189,11 @@ public class Facade {
         Producto producto = productoRepositorio.findById(idProducto)
                 .orElseThrow(() -> new Exception("Producto no encontrado."));
 
+        // Verificar si existen compras asociadas a este producto
+        if (detalleCompraRepositorio.existsByProducto_IdProducto(idProducto)) {
+            throw new Exception("No se puede eliminar el producto porque existe una compra con este producto.");
+        }
+
         // Verificar stock
         Integer stockActual = producto.getStock();
         if (stockActual > 0) {
@@ -217,8 +225,8 @@ public class Facade {
         return productoActualizado;
     }
 
-    // gestiona las compras validando datos y actualizando stock de productos 
-    // usa excepciones para manejar errores  
+    // gestiona las compras validando datos y actualizando stock de productos
+    // usa excepciones para manejar errores
 
     @Transactional
     public Compra registrarCompra(CompraPeticionDTO peticionDeCompra) throws Exception {
@@ -227,7 +235,7 @@ public class Facade {
         Proveedor proveedor = proveedorRepositorio.findById(idProveedor)
                 .orElseThrow(() -> new Exception("Proveedor no encontrado."));
 
-        // crea objetos de compra y detalle para guardar en la base de datos 
+        // crea objetos de compra y detalle para guardar en la base de datos
         Compra nuevaCompra = new Compra();
         nuevaCompra.setProveedor(proveedor);
         nuevaCompra.setFecha(new Date());
@@ -276,7 +284,7 @@ public class Facade {
         return compraRepositorio.findAll();
     }
 
-    // elimina una compra actualizando el stock de los productos 
+    // elimina una compra actualizando el stock de los productos
     @Transactional
     public void eliminarCompra(Long idCompra) throws Exception {
         Compra compra = compraRepositorio.findById(idCompra)
@@ -286,8 +294,13 @@ public class Facade {
         for (DetalleCompra detalle : detalles) {
             Long idProducto = detalle.getProducto().getIdProducto();
             Integer cantidadComprada = detalle.getCantidad();
-            // restaurar el stock del producto
-            actualizarStockProducto(idProducto, -cantidadComprada);
+
+            // Verificar si el producto aún existe antes de actualizar el stock
+            if (productoRepositorio.findById(idProducto).isPresent()) {
+                // restaurar el stock del producto
+                actualizarStockProducto(idProducto, -cantidadComprada);
+            }
+            // Si el producto ya no existe, simplemente lo ignoramos
         }
 
         compraRepositorio.delete(compra);
@@ -311,9 +324,9 @@ public class Facade {
     }
 
     // Actualiza los datos de un usuario validando cambios de correo y contraseña
-    //tambien usa excepciones para manejar errores
+    // tambien usa excepciones para manejar errores
     public Usuario actualizarUsuario(Usuario usuarioConNuevosDatos) throws Exception {
-        
+
         Long idUsuario = usuarioConNuevosDatos.getIdUsuario();
         if (idUsuario == null) {
             throw new Exception("El ID del usuario no puede ser nulo al actualizar.");
@@ -338,7 +351,7 @@ public class Facade {
                 String contrasenaEncriptada = codificadorDeContrasena.encode(nuevaContrasena);
                 usuarioOriginal.setContrasena(contrasenaEncriptada);
             }
-            
+
         }
 
         // actualiza otros datos y guarda
