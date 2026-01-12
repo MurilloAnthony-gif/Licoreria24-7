@@ -101,6 +101,9 @@
                     <div class="d-flex justify-content-between">
                         <strong>Cliente:</strong> <span id="ticketCliente"></span>
                     </div>
+                    <div class="d-flex justify-content-between">
+                        <strong>Método Pago:</strong> <span id="ticketMetodoPago"></span>
+                    </div>
                     <hr>
                     <table class="table table-sm table-borderless">
                         <thead>
@@ -116,10 +119,34 @@
                         </tbody>
                     </table>
                     <hr>
-                    <div class="d-flex justify-content-between fs-5 fw-bold">
+                    <div class="d-flex justify-content-between">
+                        <span>Subtotal:</span>
+                        <span>$<span id="ticketSubtotal"></span></span>
+                    </div>
+                    <div class="d-flex justify-content-between text-danger">
+                        <span>Descuento:</span>
+                        <span>-$<span id="ticketDescuento"></span></span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>IVA:</span>
+                        <span>$<span id="ticketIva"></span></span>
+                    </div>
+                    <div class="d-flex justify-content-between fs-5 fw-bold mt-2">
                         <span>TOTAL:</span>
                         <span id="ticketTotal"></span>
                     </div>
+
+                    <!-- Sección Transferencia -->
+                    <div id="infoTransferenciaTicketHistorial" style="display: none;" class="mt-3 border-top pt-2">
+                        <p class="fw-bold mb-1">Detalle Transferencia</p>
+                        <p class="mb-1">Ref: <span id="ticketRefTransferencia"></span></p>
+                        <div class="text-center">
+                            <p class="small text-muted mb-1">Comprobante:</p>
+                            <img id="ticketImgComprobante" src="" alt="Comprobante"
+                                style="max-width: 100%; max-height: 200px; border: 1px solid #ddd;">
+                        </div>
+                    </div>
+
                     <div class="text-center mt-3">
                         <p class="small">¡Gracias por su compra!<br>Vuelva pronto.</p>
                     </div>
@@ -141,9 +168,6 @@
         // Función para cargar y mostrar el ticket desde el historial
         function verTicket(idVenta) {
 
-            // Mostrar loader opcional si quieres
-            // window.activarLoader();
-
             fetch(`/api/ventas/${idVenta}`)
                 .then(response => {
                     if (!response.ok) throw new Error("Error al obtener venta");
@@ -153,31 +177,53 @@
                     // Llenar Modal
                     document.getElementById('ticketId').textContent = venta.idVenta;
                     document.getElementById('ticketFecha').textContent = new Date(venta.fecha).toLocaleString();
-                    document.getElementById('ticketCliente').textContent = venta.cliente;
+                    document.getElementById('ticketCliente').textContent = venta.nombreCliente;
+                    document.getElementById('ticketMetodoPago').textContent = venta.metodoPago || "Sin especificar";
+
+                    // Totales
+                    document.getElementById('ticketSubtotal').textContent = venta.subtotal.toFixed(2);
+                    document.getElementById('ticketDescuento').textContent = venta.totalDescuento.toFixed(2);
+                    document.getElementById('ticketIva').textContent = venta.montoIva.toFixed(2);
+                    document.getElementById('ticketTotal').textContent = `$${venta.total.toFixed(2)}`;
 
                     const tbody = document.getElementById('ticketItems');
                     tbody.innerHTML = '';
 
                     venta.items.forEach(item => {
+                        let descTxt = item.descuento > 0 ? ` <small class="text-muted">(-${item.descuento}%)</small>` : '';
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td>${item.producto}</td>
                             <td>${item.cantidad}</td>
                             <td>$${item.precioUnitario.toFixed(2)}</td>
-                            <td>$${item.subtotal.toFixed(2)}</td>
+                            <td>$${item.subtotal.toFixed(2)}${descTxt}</td>
                         `;
                         tbody.appendChild(tr);
                     });
 
-                    document.getElementById('ticketTotal').textContent = `$${venta.total.toFixed(2)}`;
+                    // Info Transferencia
+                    const secTrans = document.getElementById('infoTransferenciaTicketHistorial');
+                    const imgComprobante = document.getElementById('ticketImgComprobante');
+
+                    if (venta.numeroTransferencia) {
+                        secTrans.style.display = 'block';
+                        document.getElementById('ticketRefTransferencia').textContent = venta.numeroTransferencia;
+
+                        if (venta.rutaComprobante) {
+                            imgComprobante.src = venta.rutaComprobante;
+                            imgComprobante.style.display = 'block';
+                        } else {
+                            imgComprobante.style.display = 'none';
+                        }
+                    } else {
+                        secTrans.style.display = 'none';
+                    }
 
                     // Abrir Modal
-                    // window.desactivarLoader();
                     const modal = new bootstrap.Modal(document.getElementById('modalTicketHistorial'));
                     modal.show();
                 })
                 .catch(err => {
-                    // window.desactivarLoader();
                     alert("Error: " + err.message);
                 });
         }
